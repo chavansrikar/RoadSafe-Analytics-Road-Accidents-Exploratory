@@ -9,10 +9,11 @@ import seaborn as sns
 st.set_page_config(page_title="RoadSafe Analytics Dashboard", layout="wide")
 
 st.title("🚦 RoadSafe Analytics: Exploratory Data Analysis")
+# Updated citations to cover full ranges as requested
 st.markdown("""
 This dashboard covers **Milestone 2** of the RoadSafe Analytics project.
-* **Week 3:** Univariate Analysis (Distributions, Time, Weather, Day/Night) [cite: 39]
-* **Week 4:** Bivariate Analysis (Correlations, Severity Impact, Congestion) [cite: 44]
+* **Week 3:** Univariate Analysis (Distributions, Time, Weather, Day/Night) 
+* **Week 4:** Bivariate Analysis (Correlations, Severity Impact, Congestion) 
 """)
 
 # ==========================================
@@ -20,7 +21,6 @@ This dashboard covers **Milestone 2** of the RoadSafe Analytics project.
 # ==========================================
 @st.cache_data
 def load_data():
-    # Make sure this matches your actual CSV filename
     filename = 'milestone1_cleaned_data.csv'
     try:
         df = pd.read_csv(filename)
@@ -69,15 +69,16 @@ if df is not None:
             ax.set_ylabel('Count')
             # Add count labels
             for p in ax.patches:
-                ax.annotate(f'{int(p.get_height())}', (p.get_x() + p.get_width() / 2., p.get_height()),
-                            ha='center', va='baseline', fontsize=10, color='black', xytext=(0, 5),
-                            textcoords='offset points')
+                height = p.get_height()
+                if height > 0:
+                    ax.annotate(f'{int(height)}', (p.get_x() + p.get_width() / 2., height),
+                                ha='center', va='baseline', fontsize=10, color='black', xytext=(0, 5),
+                                textcoords='offset points')
             st.pyplot(fig)
 
-        # 2. Day vs Night (PIE CHART - Required) 
+        # 2. Day vs Night (PIE CHART) 
         with col2:
             st.subheader("2. Day vs. Night Accidents")
-            # Using Civil_Twilight or Sunrise_Sunset as proxy for lighting
             target_col = 'Civil_Twilight' if 'Civil_Twilight' in df.columns else 'Sunrise_Sunset'
             
             if target_col in df.columns:
@@ -110,13 +111,49 @@ if df is not None:
             plt.xticks(rotation=45)
             st.pyplot(fig)
 
-        # 5. Weather Conditions [cite: 42]
-        st.subheader("5. Top 10 Weather Conditions")
-        top_weather = df['Weather_Condition'].value_counts().head(10)
-        fig, ax = plt.subplots(figsize=(12, 6))
-        sns.barplot(x=top_weather.values, y=top_weather.index, palette='coolwarm', ax=ax)
-        ax.set_title('Top 10 Weather Conditions')
-        st.pyplot(fig)
+        # --- Month Analysis (Required by Milestone 2) [cite: 41] ---
+        st.markdown("---")
+        st.subheader("5. Accidents by Month")
+        order_months = ['January', 'February', 'March', 'April', 'May', 'June', 
+                        'July', 'August', 'September', 'October', 'November', 'December']
+        existing_months = [m for m in order_months if m in df['Month'].unique()]
+        
+        if existing_months:
+            fig, ax = plt.subplots(figsize=(12, 6))
+            sns.countplot(x='Month', data=df, order=existing_months, palette='coolwarm', ax=ax)
+            ax.set_title('Accident Frequency by Month')
+            plt.xticks(rotation=45)
+            st.pyplot(fig)
+        else:
+            st.info("Month data not available.")
+
+        st.markdown("---")
+
+        # 6. Weather Conditions [cite: 42]
+        col5, col6 = st.columns(2)
+        with col5:
+            st.subheader("6. Top 10 Weather Conditions")
+            top_weather = df['Weather_Condition'].value_counts().head(10)
+            fig, ax = plt.subplots(figsize=(12, 6))
+            sns.barplot(x=top_weather.values, y=top_weather.index, palette='coolwarm', ax=ax)
+            ax.set_title('Top 10 Weather Conditions')
+            st.pyplot(fig)
+
+        # --- Road Infrastructure Frequency (Required by Milestone 2) [cite: 42] ---
+        with col6:
+            st.subheader("7. Common Road Infrastructure Involved")
+            road_features = ['Bump', 'Crossing', 'Junction', 'Station', 'Stop', 'Traffic_Signal']
+            actual_features = [f for f in road_features if f in df.columns]
+            
+            if actual_features:
+                road_counts = df[actual_features].sum().sort_values(ascending=False)
+                fig, ax = plt.subplots(figsize=(10, 6))
+                sns.barplot(x=road_counts.values, y=road_counts.index, palette='magma', ax=ax)
+                ax.set_title('Accident Frequency by Road Feature')
+                ax.set_xlabel('Count of Accidents')
+                st.pyplot(fig)
+            else:
+                st.write("No road feature columns found.")
 
     # ==========================================
     # WEEK 4: BIVARIATE ANALYSIS [cite: 44]
@@ -147,29 +184,27 @@ if df is not None:
             ax.set_title(f'Severity vs Visibility (<= {vis_limit} miles)')
             st.pyplot(fig)
 
-        col5, col6 = st.columns(2)
+        col7, col8 = st.columns(2)
 
         # 3. Traffic Congestion (Distance) vs Severity [cite: 46]
-        with col5:
+        with col7:
             st.subheader("3. Traffic Congestion Impact")
             st.caption("Using 'Distance(mi)' (length of road affected) as a proxy for congestion/impact.")
             if 'Distance(mi)' in df.columns:
                 fig, ax = plt.subplots(figsize=(10, 6))
-                # Using a scatterplot with transparency to show density
                 sns.scatterplot(x='Distance(mi)', y='Severity', data=df, alpha=0.5, hue='Severity', palette='deep', ax=ax)
                 ax.set_title('Affected Distance vs Severity')
-                ax.set_xlim(0, 20) # Limiting x-axis for better visibility of common accidents
+                ax.set_xlim(0, 20)
                 st.pyplot(fig)
 
-        # 4. Road Infrastructure Features [cite: 46]
-        with col6:
+        # 4. Road Infrastructure Features vs Severity [cite: 46]
+        with col8:
             st.subheader("4. Road Features vs High Severity")
             road_features = ['Bump', 'Crossing', 'Junction', 'Station', 'Stop', 'Traffic_Signal']
             road_data = []
 
             for feature in road_features:
                 if feature in df.columns:
-                    # Calculate percentage of severe accidents (Severity 3 or 4) for each feature
                     total_cases = df[df[feature] == True].shape[0]
                     if total_cases > 0:
                         severe_cases = df[(df[feature] == True) & (df['Severity'].isin([3, 4]))].shape[0]
@@ -184,15 +219,15 @@ if df is not None:
                 ax.set_ylabel('Percentage (%)')
                 st.pyplot(fig)
         
-        # 5. Pair Plot [cite: 47]
-        st.subheader("5. Pair Plot (Sampled Data)")
-        st.info("Using a random sample of 500 records to ensure fast loading performance.")
+        # 5. Pair Plot [cite: 47] - FULL DATASET VERSION
+        st.subheader("5. Pair Plot (Complete Dataset)")
+        st.markdown("**Note:** This plot uses the full dataset as requested. Rendering may take time depending on data size.")
+        
         if len(available_cols) > 1:
-            # Drop NaN for clean plotting and take a sample
-            sample_df = df[available_cols].dropna().sample(n=min(500, len(df)), random_state=42)
+            # Using the full dataframe (df) - NO SAMPLING applied
+            full_data_plot = df[available_cols].dropna()
             
-            # Create the PairGrid
-            pair_plot_fig = sns.pairplot(sample_df, hue='Severity', palette='viridis', diag_kind='kde')
+            # Using diag_kind='hist' is slightly faster for large datasets than 'kde'
+            pair_plot_fig = sns.pairplot(full_data_plot, hue='Severity', palette='viridis', diag_kind='hist')
             
-            # Explicitly render it in Streamlit
             st.pyplot(pair_plot_fig.fig)
