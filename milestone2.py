@@ -27,7 +27,7 @@ def load_data():
         # Ensure Start_Time is datetime [cite: 36]
         if 'Start_Time' in df.columns:
             df['Start_Time'] = pd.to_datetime(df['Start_Time'], errors='coerce')
-        
+
         # Feature Engineering (Week 2 Requirements recap) [cite: 37]
         if 'Hour' not in df.columns and 'Start_Time' in df.columns:
             df['Hour'] = df['Start_Time'].dt.hour
@@ -35,7 +35,7 @@ def load_data():
             df['Weekday'] = df['Start_Time'].dt.day_name()
         if 'Month' not in df.columns and 'Start_Time' in df.columns:
             df['Month'] = df['Start_Time'].dt.month_name()
-            
+
         return df
     except FileNotFoundError:
         st.error(f"File '{filename}' not found. Please ensure it is in the same directory.")
@@ -46,7 +46,7 @@ df = load_data()
 if df is not None:
     # Set global plotting style
     sns.set_style("darkgrid")
-    
+
     # Create tabs for organization
     tab1, tab2 = st.tabs(["Week 3: Univariate Analysis", "Week 4: Bivariate Analysis"])
 
@@ -56,9 +56,9 @@ if df is not None:
     with tab1:
         st.header("Week 3: Univariate Analysis")
         st.markdown("Analyzing distributions of accidents by time, weather, and lighting conditions.")
-        
+
         col1, col2 = st.columns(2)
-        
+
         # 1. Severity Distribution [cite: 40]
         with col1:
             st.subheader("1. Accident Severity Distribution")
@@ -80,7 +80,7 @@ if df is not None:
         with col2:
             st.subheader("2. Day vs. Night Accidents")
             target_col = 'Civil_Twilight' if 'Civil_Twilight' in df.columns else 'Sunrise_Sunset'
-            
+
             if target_col in df.columns:
                 counts = df[target_col].value_counts()
                 fig, ax = plt.subplots(figsize=(6, 6))
@@ -91,7 +91,7 @@ if df is not None:
                 st.warning("Twilight/Sunset column not found for Pie Chart.")
 
         st.markdown("---")
-        
+
         # 3. Time Analysis [cite: 41]
         col3, col4 = st.columns(2)
         with col3:
@@ -117,7 +117,7 @@ if df is not None:
         order_months = ['January', 'February', 'March', 'April', 'May', 'June', 
                         'July', 'August', 'September', 'October', 'November', 'December']
         existing_months = [m for m in order_months if m in df['Month'].unique()]
-        
+
         if existing_months:
             fig, ax = plt.subplots(figsize=(12, 6))
             sns.countplot(x='Month', data=df, order=existing_months, palette='coolwarm', ax=ax)
@@ -144,7 +144,7 @@ if df is not None:
             st.subheader("7. Common Road Infrastructure Involved")
             road_features = ['Bump', 'Crossing', 'Junction', 'Station', 'Stop', 'Traffic_Signal']
             actual_features = [f for f in road_features if f in df.columns]
-            
+
             if actual_features:
                 road_counts = df[actual_features].sum().sort_values(ascending=False)
                 fig, ax = plt.subplots(figsize=(10, 6))
@@ -166,7 +166,7 @@ if df is not None:
         st.subheader("1. Correlation Heatmap (Weather & Severity)")
         numeric_cols = ['Severity', 'Temperature(F)', 'Humidity(%)', 'Pressure(in)', 'Visibility(mi)', 'Wind_Speed(mph)', 'Distance(mi)']
         available_cols = [c for c in numeric_cols if c in df.columns]
-        
+
         if available_cols:
             fig, ax = plt.subplots(figsize=(10, 8))
             corr = df[available_cols].corr()
@@ -178,7 +178,7 @@ if df is not None:
         if 'Visibility(mi)' in df.columns:
             vis_limit = st.slider("Filter Visibility Range (miles) to remove outliers", 0, 100, 10)
             subset_vis = df[df['Visibility(mi)'] <= vis_limit]
-            
+
             fig, ax = plt.subplots(figsize=(12, 6))
             sns.boxplot(x='Severity', y='Visibility(mi)', data=subset_vis, palette='Set2', ax=ax)
             ax.set_title(f'Severity vs Visibility (<= {vis_limit} miles)')
@@ -218,16 +218,16 @@ if df is not None:
                 ax.set_title('Percentage of Severe Accidents (Severity 3 & 4) by Feature')
                 ax.set_ylabel('Percentage (%)')
                 st.pyplot(fig)
-        
+
         # 5. Pair Plot [cite: 47] - FULL DATASET VERSION
         st.subheader("5. Pair Plot (Complete Dataset)")
         st.markdown("**Note:** This plot uses the full dataset as requested. Rendering may take time depending on data size.")
-        
+
         if len(available_cols) > 1:
             # Using the full dataframe (df) - NO SAMPLING applied
             full_data_plot = df[available_cols].dropna()
-            
+
             # Using diag_kind='hist' is slightly faster for large datasets than 'kde'
             pair_plot_fig = sns.pairplot(full_data_plot, hue='Severity', palette='viridis', diag_kind='hist')
-            
+
             st.pyplot(pair_plot_fig.fig)
